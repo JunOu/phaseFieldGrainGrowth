@@ -1,0 +1,92 @@
+## simulation of grain growth using phase field theory.
+## written by Jun Ou
+
+import numpy as np
+import matplotlib.pylab as plt
+import matplotlib.cm as cm
+import random as rd
+import math
+
+def nMP(index,gridsize):
+    nM1 = index-1
+    nM2 = index-2
+    nP1 = index+1
+    nP2 = index+2
+    
+    if index==0:
+        nM1 = gridsize-1
+        nM2 = gridsize-2
+    elif index==1:
+        nM2 = gridsize-1
+    elif index==gridsize-1:
+        nP1 = 0
+        nP2 = 1
+    elif index==gridsize-2:
+        nP2 = 0
+    else:
+        nM1 = index-1
+        nM2 = index-2
+        nP1 = index+1
+        nP2 = index+2
+    return nM1,nM2,nP1,nP2
+
+class phaseField():
+    def __init__(self,gridsize,p,dx,dt,totalTime):
+        self.gridsize = gridsize
+        self.p = p
+        self.dx = dx
+        self.dt = dt
+        self.totalTime = totalTime        
+        self.alpha = 1.0
+        self.beta = 1.0
+        self.gamma = 1.0
+        self.kappa = 2.0
+        self.K = 2.0
+        self.L = 1.0
+        self.eta = np.zeros([gridsize,gridsize,p])        
+        self.__seeding()
+        
+        #print self.eta
+    
+    def __seeding(self):
+        for i in range(self.p):
+            x = rd.randint(0,self.gridsize-1)
+            y = rd.randint(0,self.gridsize-1)
+            p = rd.randint(0,self.p-1)
+            self.eta[x,y,p] = 1
+    
+    def grainGrow(self):
+        for n in range(1,int(self.totalTime/self.dt)):
+            print 'Processing timestep: ', n
+            for i in range(self.gridsize):
+                for j in range(self.gridsize):
+                    iM1,iM2,iP1,iP2 = nMP(i,self.gridsize)
+                    jM1,jM2,jP1,jP2 = nMP(j,self.gridsize)
+                    gradi = 0.5*(self.eta[iM1,j,:]+self.eta[iP1,j,:]+self.eta[i,jM1,:]+self.eta[i,jP1,:]-4.0*self.eta[i,j,:])/self.dx**2.0 + 0.25*(self.eta[iM2,j,:]+self.eta[iP2,j,:]+self.eta[i,jM2,:]+self.eta[i,jP2,:]-4.0*self.eta[i,j,:])/self.dx**2.0
+                    sumeta = 0.0
+                    for s in range(self.p):
+                        etaSquare = self.eta[i,j,s]**2.0
+                        sumeta = sumeta + etaSquare
+                    detai = -self.L*(-self.alpha*self.eta[i,j,:]+self.beta*self.eta[i,j,:]**3.0+2.0*self.gamma*self.eta[i,j,:]*(sumeta-self.eta[i,j,:]**2)-self.kappa*gradi)
+                    self.eta[i,j,:] = self.eta[i,j,:]+detai*self.dt
+                    
+            grey = np.zeros([self.gridsize,self.gridsize])       
+            for s in range(self.p):
+                grey[:,:] = grey[:,:]+self.eta[:,:,s]**2
+
+            my_dpi =int(self.gridsize/5.0)
+            im=plt.imshow(grey,cmap = cm.Greys_r)
+            im.axes.get_xaxis().set_visible(False)
+            im.axes.get_yaxis().set_visible(False)
+            
+            if n/1.0 == n/1:
+                plt.savefig('./pyplot/'+str(n)+'.png',bbox_inches='tight',dpi=my_dpi)
+            #plt.show()    
+          
+def main():
+    p1 = phaseField(200,400,2,0.5,400)
+    p1.grainGrow()
+    return
+
+if __name__=='__main__':
+    main()
